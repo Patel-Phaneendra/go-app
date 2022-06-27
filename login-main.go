@@ -1,32 +1,58 @@
-package http
+package main
 
 import (
-	"net/http"
-	"time"
+	"errors"
+	"fmt"
+	"log"
 
-	"github.com/aristat/golang-example-app/app/logger"
-	"github.com/go-chi/chi/v5/middleware"
+	"net/http"
+	"os"
+
+	"github.com/aristat/http-server/internal/app/router"
+	"github.com/joho/godotenv"
+	"github.com/urfave/cli/v2"
 )
 
-func Logger(l logger.Logger) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+func main() {
+	app := &cli.App{
+		Commands: []*cli.Command{
+			{
+				Name:        "start",
+				Aliases:     []string{"s"},
+				Usage:       "run server",
+				Description: "http server",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "envFile", Value: ".env.development"},
+				},
+				Action: func(c *cli.Context) error {
+					fileName := c.String("envFile")
 
-			t1 := time.Now()
-			defer func() {
-				l.Info("proto %s, path %s, lat %d, status %d, size %d, reqId %s", logger.Args(
-					r.Proto,
-					r.URL.Path,
-					time.Since(t1),
-					ww.Status(),
-					ww.BytesWritten(),
-					middleware.GetReqID(r.Context()),
-				))
-			}()
+					err := godotenv.Load(fileName)
+					if err != nil {
+						return errors.New("Error loading .env file")
+					}
 
-			next.ServeHTTP(ww, r)
-		}
-		return http.HandlerFunc(fn)
+					r, cleanup, err := router.Build()
+					defer cleanup()
+					if err != nil {
+						return err
+					}
+
+					s := &http.Server{
+						Handler: r,
+						Addr:    fmt.Sprintf(":%s", os.Getenv("PORT")),
+					}
+
+					err = s.ListenAndServe()
+					return err
+				},
+			},
+		},
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal("cli error ", err)
+		os.Exit(1)
 	}
 }
