@@ -1,3 +1,3 @@
-module github.com/Patel-Phaneendra/golang
+module github.com/Patel-Phaneendra/go-app
 
 go 1.15
