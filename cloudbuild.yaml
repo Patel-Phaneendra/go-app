@@ -34,16 +34,16 @@ steps:
 
   # [START cloudbuild_go_inspect_yaml]
   # Docker inspect to get image details  
-  #- name: gcr.io/cloud-builders/docker
-  #  entrypoint: /bin/bash
-  #  args:
-  #  - -c
-  #  - |
-  #    docker image inspect asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA --format '{{index .RepoDigests 0}}' > image-digest.txt &&
-  #    cat image-digest.txt
-  # waitFor: 
-  #  - push  
-  # id: inspect
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: /bin/bash
+    args:
+    - -c
+    - |
+      docker image inspect asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA --format '{{index .RepoDigests 0}}' > image-digest.txt &&
+      cat image-digest.txt
+   waitFor: 
+    - push  
+   id: inspect
   # [END cloudbuild_go_inspect_yaml]
  
  
