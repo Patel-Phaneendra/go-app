@@ -43,7 +43,7 @@ steps:
       cat image-digest.txt
     waitFor: 
     - push  
-     id: inspect
+    id: inspect
   # [END cloudbuild_go_inspect_yaml]
  
  
