@@ -1,0 +1,78 @@
+steps:
+  # Run tests and save to file
+  # - name: golang:1.18
+  #   entrypoint: /bin/bash
+  #   args: 
+  #     - -c
+  #     - |
+  #       go get github.com/jstemmer/go-junit-report
+  #       go install github.com/jstemmer/go-junit-report
+  #       2>&1 go test -timeout 1m -v ./... | tee sponge.log
+  #       /go/bin/go-junit-report -set-exit-code < sponge.log > ${SHORT_SHA}_test_log.xml
+  # [END cloudbuild_go_test_yaml]
+  #- name: 'asia-south1-docker.pkg.dev/hbl-poc-digfac-anthos-prj/mb-devops/sonar-scanner:latest'
+  #  args:
+  #  - '-Dsonar.host.url=http://34.93.206.118:9000'
+  #  - '-Dsonar.login=ajiteshh@gmail.com'
+  #  - '-Dsonar.projectKey=mb'
+  #  - '-Dsonar.sources=golang-sample/.'
+  #  - '-Dsonar.login=b899c4c79075847d6bb77f1fcc9695d88bdb3ee0'
+
+  # [START cloudbuild_go_image_yaml]
+  # Docker Build
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 
+           'asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA', '.']
+  # [END cloudbuild_go_image_yaml]
+  
+  # [START cloudbuild_go_push_yaml]
+  # Docker push to Google Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA']
+    id: push
+  # [END cloudbuild_go_push_yaml]
+
+  # [START cloudbuild_go_inspect_yaml]
+  # Docker inspect to get image details  
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: /bin/bash
+    args:
+    - -c
+    - |
+      docker image inspect asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA --format '{{index .RepoDigests 0}}' > image-digest.txt &&
+      cat image-digest.txt
+    waitFor: 
+    - push  
+    id: inspect
+  # [END cloudbuild_go_inspect_yaml]
+ 
+ 
+# [START cloudbuild_go_deploy_yaml]
+# Deploy to GKE 
+  - name: "gcr.io/cloud-builders/gke-deploy"
+    args:
+    - run
+    - --filename=hello.deployment.yaml
+    - --image=asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA
+    - --location=asia-south1
+    - --cluster=mbrw-dev-cluster-4
+# [END cloudbuild_go_deploy_yaml]
+
+# [START cloudbuild_go_logs_yaml]
+# Save test logs to Google Cloud Storage
+# artifacts:
+#   objects:
+#     location: gs://mb-devops/
+#     paths:
+#       - ${SHORT_SHA}_test_log.xml
+# [END cloudbuild_go_logs_yaml]
+# Store images in Google Artifact Registry
+
+substitutions:
+    _SERVICE_URL: https://voucher-server-hobr26cxda-el.a.run.app/
+    _SERVICE_ACCOUNT: voucher-invoker@$PROJECT_ID.iam.gserviceaccount.com
+images:
+  - asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA
+
+options:
+ logging: CLOUD_LOGGING_ONLY
