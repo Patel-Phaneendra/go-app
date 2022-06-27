@@ -1,49 +1,58 @@
- // Copyright 2020 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// Sample run-helloworld is a minimal Cloud Run service.
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
+
 	"net/http"
 	"os"
+
+	"github.com/aristat/http-server/internal/app/router"
+	"github.com/joho/godotenv"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	log.Print("starting server...")
-	http.HandleFunc("/", handler)
+	app := &cli.App{
+		Commands: []*cli.Command{
+			{
+				Name:        "start",
+				Aliases:     []string{"s"},
+				Usage:       "run server",
+				Description: "http server",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "envFile", Value: ".env.development"},
+				},
+				Action: func(c *cli.Context) error {
+					fileName := c.String("envFile")
 
-	// Determine port for HTTP service.
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Printf("defaulting to port %s", port)
+					err := godotenv.Load(fileName)
+					if err != nil {
+						return errors.New("Error loading .env file")
+					}
+
+					r, cleanup, err := router.Build()
+					defer cleanup()
+					if err != nil {
+						return err
+					}
+
+					s := &http.Server{
+						Handler: r,
+						Addr:    fmt.Sprintf(":%s", os.Getenv("PORT")),
+					}
+
+					err = s.ListenAndServe()
+					return err
+				},
+			},
+		},
 	}
 
-	// Start HTTP server.
-	log.Printf("listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal("cli error ", err)
+		os.Exit(1)
 	}
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	name := os.Getenv("NAME")
-	if name == "" {
-		name = "from Kormangala"
-	}
-	fmt.Fprintf(w, "Hello %s!\n", name)
 }
