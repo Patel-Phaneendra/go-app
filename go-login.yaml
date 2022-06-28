@@ -1,36 +1,31 @@
-package main
-
-import (
-	"fmt"
-	"io"
-	"log"
-	"net"
-	"net/http"
-	"os"
-)
-
-func main() {
-	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Hello, playground")
-	})
-
-	log.Println("Starting server...")
-	l, err := net.Listen("tcp", "localhost:8080")
-	if err != nil {
-		log.Fatal(err)
-	}
-	go func() {
-		log.Fatal(http.Serve(l, nil))
-	}()
-
-	log.Println("Sending request...")
-	res, err := http.Get("http://localhost:8080/hello")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println("Reading response...")
-	if _, err := io.Copy(os.Stdout, res.Body); err != nil {
-		log.Fatal(err)
-	}
-}
+# This Deployment manifest defines:
+# - single-replica deployment of the container image, with label "app: go-hello-world"
+# - Pod exposes port 8080
+# - specify PORT environment variable to the container process
+# Syntax reference https://kubernetes.io/docs/concepts/configuration/overview/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-login
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-login
+  template:
+    metadata:
+      labels:
+        app: go-login
+    spec:
+      containers:
+      - name: server
+        image: asia-south1-docker.pkg.dev/hbl-poc-digfac-anthos-prj/mb-devops/myimage
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
