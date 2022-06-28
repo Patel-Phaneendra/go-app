@@ -55,7 +55,7 @@ steps:
     - --filename=go-login.yaml
     - --image=asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA
     - --location=asia-south1
-    - --cluster=mbrw-dev-cluster-4
+    - --cluster=hbl-poc-mb-rw-dm-cluster
 # [END cloudbuild_go_deploy_yaml]
 
 # [START cloudbuild_go_logs_yaml]
