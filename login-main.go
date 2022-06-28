@@ -1,100 +1,49 @@
-package logger
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Sample run-helloworld is a minimal Cloud Run service.
+package main
 
 import (
-	"context"
-	"strings"
-	"time"
-
-	"google.golang.org/grpc"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 )
 
-// UnaryClientInterceptor wrapper to logging query
-func UnaryClientInterceptor(log Logger, enable bool) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		if !enable {
-			return invoker(ctx, method, req, reply, cc, opts...)
-		}
+func main() {
+	log.Print("starting server...")
+	http.HandleFunc("/", handler)
 
-		startTime := time.Now()
-		err := invoker(ctx, method, req, reply, cc, opts...)
+	// Determine port for HTTP service.
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("defaulting to port %s", port)
+	}
 
-		var e string
-		if err != nil {
-			e = strings.ReplaceAll(err.Error(), "\n", "")
-		}
-
-		log.Debug("\nQUERY UnaryClient:\n\nData: %v\n\nERROR:\n%v\n\n", Args(req, e), WithFields(Fields{
-			"time": time.Since(startTime).String(),
-		}))
-
-		return err
+	// Start HTTP server.
+	log.Printf("listening on port %s", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal(err)
 	}
 }
 
-// StreamClientInterceptor returns a new streaming client interceptor
-func StreamClientInterceptor(log Logger, enable bool) grpc.StreamClientInterceptor {
-	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-		if !enable {
-			return streamer(ctx, desc, cc, method, opts...)
-		}
-
-		startTime := time.Now()
-		clientStream, err := streamer(ctx, desc, cc, method, opts...)
-		var e string
-		if err != nil {
-			e = strings.ReplaceAll(err.Error(), "\n", "")
-		}
-
-		log.Debug("\nQUERY StreamClient:\n\nMethod: %v\n\nERROR:\n%v\n\n", Args(method, e), WithFields(Fields{
-			"time": time.Since(startTime).String(),
-		}))
-
-		return clientStream, err
+func handler(w http.ResponseWriter, r *http.Request) {
+	name := os.Getenv("NAME")
+	if name == "" {
+		name = "from Koramangala"
 	}
-}
-
-// UnaryServerInterceptor wrapper to logging query
-func UnaryServerInterceptor(log Logger, enable bool) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		if !enable {
-			return handler(ctx, req)
-		}
-
-		startTime := time.Now()
-		res, err := handler(ctx, req)
-
-		var e string
-		if err != nil {
-			e = strings.ReplaceAll(err.Error(), "\n", "")
-		}
-
-		log.Debug("\nQUERY UnaryServer:\n\nFullMethod: %v\nData: %v\nRESPONSE:\n\nData: %v\nERROR:\n%v\n", Args(info.FullMethod, req, res, e), WithFields(Fields{
-			"time": time.Since(startTime).String(),
-		}))
-
-		return res, err
-	}
-}
-
-// StreamServerInterceptor returns a new streaming server interceptor
-func StreamServerInterceptor(log Logger, enable bool) grpc.StreamServerInterceptor {
-	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		if !enable {
-			return handler(srv, stream)
-		}
-
-		startTime := time.Now()
-		err := handler(srv, stream)
-
-		var e string
-		if err != nil {
-			e = strings.ReplaceAll(err.Error(), "\n", "")
-		}
-
-		log.Debug("\nQUERY StreamServer:\n\nFullMethod: %v\n\nERROR:\n%v\n", Args(info.FullMethod, e), WithFields(Fields{
-			"time": time.Since(startTime).String(),
-		}))
-
-		return err
-	}
+	fmt.Fprintf(w, "Hello %s!\n", name)
 }
