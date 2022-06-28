@@ -1,22 +1,11 @@
-// Go program to illustrate the
-// use of function
+//go:generate go run github.com/vektra/mockery/v2 --all --with-expecter --inpackage
+
 package main
-import "fmt"
 
-// area() is used to find the
-// area of the rectangle
-// area() function two parameters,
-// i.e, length and width
-func area(length, width int)int{
-	
-	Ar := length* width
-	return Ar
-}
+import (
+	"github.hdfcbank.com/HDFCBANK/mb-microservices-template/login/cmd/prepare"
+)
 
-// Main function
 func main() {
-
-// Display the area of the rectangle
-// with method calling
-fmt.Printf("Area of rectangle is : %d", area(12, 10))
+	prepare.Prepare()
 }
