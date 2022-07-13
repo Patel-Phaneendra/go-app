@@ -20,42 +20,42 @@ steps:
 
   # [START cloudbuild_go_image_yaml]
   # Docker Build
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 
+   - name: 'gcr.io/cloud-builders/docker'
+     args: ['build', '-t', 
            'asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA', '.']
   # [END cloudbuild_go_image_yaml]
   
   # [START cloudbuild_go_push_yaml]
   # Docker push to Google Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA']
-    id: push
+   - name: 'gcr.io/cloud-builders/docker'
+     args: ['push', 'asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA']
+     id: push
   # [END cloudbuild_go_push_yaml]
 
   # [START cloudbuild_go_inspect_yaml]
   # Docker inspect to get image details  
-  - name: gcr.io/cloud-builders/docker
-    entrypoint: /bin/bash
-    args:
-    - -c
-    - |
+   - name: gcr.io/cloud-builders/docker
+     entrypoint: /bin/bash
+     args:
+     - -c
+     - |
       docker image inspect asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA --format '{{index .RepoDigests 0}}' > image-digest.txt &&
       cat image-digest.txt
-    waitFor: 
-    - push  
-    id: inspect
+     waitFor: 
+     - push  
+     id: inspect
   # [END cloudbuild_go_inspect_yaml]
  
  
 # [START cloudbuild_go_deploy_yaml]
 # Deploy to GKE 
-  - name: "gcr.io/cloud-builders/gke-deploy"
-    args:
-    - run
-    - --filename=go-login.yaml
-    - --image=asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA
-    - --location=asia-south1-a
-    - --cluster=poc-cluster
+   - name: "gcr.io/cloud-builders/gke-deploy"
+     args:
+     - run
+     - --filename=go-login.yaml
+     - --image=asia-south1-docker.pkg.dev/$PROJECT_ID/mb-devops/myimage:$SHORT_SHA
+     - --location=asia-south1-a
+     - --cluster=poc-cluster
 # [END cloudbuild_go_deploy_yaml]
 
 # [START cloudbuild_go_logs_yaml]
